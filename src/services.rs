@@ -19,7 +19,7 @@ pub struct CreateUserBody {
     pub password: String,
 }
 
-#[post("/create-user")]
+#[post("/user")]
 pub async fn create_user(state: Data<AppState>, body: Json<CreateUserBody>) -> impl Responder {
     // check name duplication
     match sqlx::query_as::<_, User>(
