@@ -3,7 +3,7 @@ use dotenv::dotenv;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 
 mod services;
-use services::{create_user, patch_user};
+use services::{create_user, patch_user, delete_user};
 
 pub struct AppState {
     db: Pool<Postgres>
@@ -24,6 +24,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(AppState { db: pool.clone() }))
             .service(create_user)
             .service(patch_user)
+            .service(delete_user)
     })
     .bind(("0.0.0.0", 18421))?
     .run()
