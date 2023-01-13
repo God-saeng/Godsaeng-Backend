@@ -126,7 +126,7 @@ pub async fn delete_user(state: Data<AppState>, body: Json<DeleteUserBody>) -> i
         .execute(&state.db)
         .await
     {
-        Ok(_) => HttpResponse::Ok().json("Successfully"),
+        Ok(_) => HttpResponse::Ok().json("Successfully deleted"),
         Err(_) => HttpResponse::InternalServerError().json("Failed to delete user")
     }
 
