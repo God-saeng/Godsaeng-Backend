@@ -80,11 +80,12 @@ async fn user_auth(state: &Data<AppState>, name: String, password: String) -> i3
 }
 
 #[patch("/user")]
-pub async fn patch_user(state: Data<AppState>, body: Json<PatchUserBody>) -> impl Responder {
-    let user_id: i32 =
-        match user_auth(&state, body.name.to_string(), body.password.to_string()).await {
-            -1 => return HttpResponse::BadRequest().json("Authentication failed"),
-            x => x,
+pub async fn patch_user(state: Data<AppState>, body: Json<PatchUserBody>) -> impl Responder{
+    let user_id: i32 = match user_auth(&state, body.name.to_string(), body.password.to_string())
+        .await
+        {
+            -1 => return HttpResponse::Unauthorized().json("Authentication failed"),
+            x => x
         };
 
     match check_duplication(&state, body.new_name.to_string()).await {
@@ -107,11 +108,12 @@ pub async fn patch_user(state: Data<AppState>, body: Json<PatchUserBody>) -> imp
 }
 
 #[delete("/user")]
-pub async fn delete_user(state: Data<AppState>, body: Json<DeleteUserBody>) -> impl Responder {
-    let user_id: i32 =
-        match user_auth(&state, body.name.to_string(), body.password.to_string()).await {
-            -1 => return HttpResponse::BadRequest().json("Authentication failed"),
-            x => x,
+pub async fn delete_user(state: Data<AppState>, body: Json<DeleteUserBody>) -> impl Responder{
+    let user_id: i32 = match user_auth(&state, body.name.to_string(), body.password.to_string())
+        .await
+        {
+            -1 => return HttpResponse::Unauthorized().json("Authentication failed"),
+            x => x
         };
     match sqlx::query("DELETE FROM userInfo WHERE id = $1")
         .bind(user_id)
