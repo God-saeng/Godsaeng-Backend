@@ -7,6 +7,11 @@ use events::{create_event, delete_event, patch_event};
 use services::{create_user, delete_user, patch_user};
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 
+mod users;
+use users::{create_user, patch_user, delete_user};
+
+mod events;
+use events::{create_event, patch_event, delete_event};
 pub struct AppState {
     db: Pool<Postgres>,
 }
