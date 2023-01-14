@@ -5,6 +5,8 @@ use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 mod services;
 use services::{create_user, delete_user, patch_user};
 
+mod events;
+use events::{create_event};
 pub struct AppState {
     db: Pool<Postgres>,
 }
@@ -25,6 +27,7 @@ async fn main() -> std::io::Result<()> {
             .service(create_user)
             .service(patch_user)
             .service(delete_user)
+            .service(create_event)
     })
     .bind(("0.0.0.0", 18421))?
     .run()
