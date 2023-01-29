@@ -3,10 +3,10 @@ use dotenv::dotenv;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 
 mod services;
-use services::{create_user};
+use services::create_user;
 
 pub struct AppState {
-    db: Pool<Postgres>
+    db: Pool<Postgres>,
 }
 
 #[actix_web::main]
