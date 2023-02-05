@@ -1,9 +1,9 @@
+use crate::AppState;
 use actix_web::{
     patch, post,
     web::{Data, Json},
     HttpResponse, Responder,
 };
-use serde::{Deserialize, Serialize};
 use serde::{Deserialize, Serialize};
 use sqlx::{self, FromRow};
 
@@ -58,10 +58,7 @@ async fn check_duplication(state: &Data<AppState>, name: String) -> bool {
     .fetch_all(&state.db)
     .await
     {
-        Ok(num) => match num.len() {
-            0 => true,
-            _ => false,
-        },
+        Ok(num) => matches!(num.len(), 0),
         Err(_) => false,
     }
 }
