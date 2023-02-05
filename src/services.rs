@@ -34,11 +34,6 @@ struct IdRow {
     pub id: i32,
 }
 
-#[derive(FromRow)]
-struct IdRow {
-    pub id: i32,
-}
-
 #[post("/create-user")]
 pub async fn create_user(state: Data<AppState>, body: Json<CreateUserBody>) -> impl Responder {
     // check name duplication
