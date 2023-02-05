@@ -1,6 +1,6 @@
 use crate::AppState;
 use actix_web::{
-    post, patch, delete,
+    delete, patch, post,
     web::{Data, Json},
     HttpResponse, Responder,
 };
@@ -22,7 +22,7 @@ pub struct PatchUserBody {
     pub name: String,
     pub password: String,
     pub new_name: String,
-    pub new_password: String
+    pub new_password: String,
 }
 #[derive(Deserialize)]
 pub struct DeleteUserBody {
@@ -31,7 +31,7 @@ pub struct DeleteUserBody {
 }
 #[derive(FromRow)]
 struct IdRow {
-    pub id: i32
+    pub id: i32,
 }
 
 #[derive(FromRow)]
@@ -112,22 +112,18 @@ pub async fn patch_user(state: Data<AppState>, body: Json<PatchUserBody>) -> imp
 }
 
 #[delete("/user")]
-pub async fn delete_user(state: Data<AppState>, body: Json<DeleteUserBody>) -> impl Responder{
-    let user_id: i32 = match user_auth(&state, body.name.to_string(), body.password.to_string())
-        .await
-        {
+pub async fn delete_user(state: Data<AppState>, body: Json<DeleteUserBody>) -> impl Responder {
+    let user_id: i32 =
+        match user_auth(&state, body.name.to_string(), body.password.to_string()).await {
             -1 => return HttpResponse::BadRequest().json("Authentication failed"),
-            x => x
+            x => x,
         };
-    match sqlx::query(
-        "DELETE FROM userInfo WHERE id = $1"
-    )
+    match sqlx::query("DELETE FROM userInfo WHERE id = $1")
         .bind(user_id)
         .execute(&state.db)
         .await
     {
         Ok(_) => HttpResponse::Ok().json("Successfully deleted"),
-        Err(_) => HttpResponse::InternalServerError().json("Failed to delete user")
+        Err(_) => HttpResponse::InternalServerError().json("Failed to delete user"),
     }
-
 }
