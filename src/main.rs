@@ -3,15 +3,10 @@ mod services;
 
 use actix_web::{web::Data, App, HttpServer};
 use dotenv::dotenv;
-use events::create_event;
+use events::{create_event, patch_event};
 use services::{create_user, delete_user, patch_user};
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 
-mod services;
-use services::{create_user, patch_user, delete_user};
-
-mod events;
-use events::{create_event, patch_event};
 pub struct AppState {
     db: Pool<Postgres>,
 }
