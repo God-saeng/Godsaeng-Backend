@@ -1,9 +1,9 @@
-use serde::{Deserialize, Serialize};
 use actix_web::{
-    post, patch,
+    patch, post,
     web::{Data, Json},
     HttpResponse, Responder,
 };
+use serde::{Deserialize, Serialize};
 use serde::{Deserialize, Serialize};
 use sqlx::{self, FromRow};
 
@@ -22,30 +22,28 @@ pub struct PatchUserBody {
     pub name: String,
     pub password: String,
     pub new_name: String,
-    pub new_password: String
+    pub new_password: String,
 }
 
 #[derive(FromRow)]
 struct IdRow {
-    pub id: i32
+    pub id: i32,
 }
 
 #[post("/create-user")]
 pub async fn create_user(state: Data<AppState>, body: Json<CreateUserBody>) -> impl Responder {
     // check name duplication
-    match check_duplication(&state, body.name.to_string())
-        .await
-        {
-            true => {},
-            false => return HttpResponse::BadRequest().json("Name is already exist")
-        }
+    match check_duplication(&state, body.name.to_string()).await {
+        true => {}
+        false => return HttpResponse::BadRequest().json("Name is already exist"),
+    }
     match sqlx::query_as::<_, User>(
-        "INSERT INTO userInfo (name, password) VALUES ($1, $2) RETURNING id, name"
+        "INSERT INTO userInfo (name, password) VALUES ($1, $2) RETURNING id, name",
     )
-        .bind(body.name.to_string())
-        .bind(body.password.to_string())
-        .fetch_one(&state.db)
-        .await
+    .bind(body.name.to_string())
+    .bind(body.password.to_string())
+    .fetch_one(&state.db)
+    .await
     {
         Ok(user) => HttpResponse::Ok().json(user),
         Err(_) => HttpResponse::InternalServerError().json("Failed to create user"),
@@ -54,67 +52,55 @@ pub async fn create_user(state: Data<AppState>, body: Json<CreateUserBody>) -> i
 
 async fn check_duplication(state: &Data<AppState>, name: String) -> bool {
     match sqlx::query_as::<_, User>(
-        "SELECT id, name FROM userInfo WHERE name = $1" // will be changed to `SELECT COUNT`
+        "SELECT id, name FROM userInfo WHERE name = $1", // will be changed to `SELECT COUNT`
     )
-        .bind(name)
-        .fetch_all(&state.db)
-        .await
+    .bind(name)
+    .fetch_all(&state.db)
+    .await
     {
-        Ok(num) => {
-            match num.len() {   
-                0 => true,
-                _ => false
-            }
+        Ok(num) => match num.len() {
+            0 => true,
+            _ => false,
         },
-        Err(_) => {
-            false
-        }
+        Err(_) => false,
     }
 }
 
-async fn user_auth(state: &Data<AppState>, name:String, password: String) -> i32 {
-    match sqlx::query_as::<_, IdRow>(
-        "SELECT id FROM userInfo WHERE name = $1 AND password = $2"
-    )
+async fn user_auth(state: &Data<AppState>, name: String, password: String) -> i32 {
+    match sqlx::query_as::<_, IdRow>("SELECT id FROM userInfo WHERE name = $1 AND password = $2")
         .bind(name)
         .bind(password)
         .fetch_one(&state.db)
         .await
     {
-        Ok(id_row) => 
-        {
-            id_row.id
-        },
-        Err(_) => -1
+        Ok(id_row) => id_row.id,
+        Err(_) => -1,
     }
 }
 
 #[patch("/user")]
-pub async fn patch_user(state: Data<AppState>, body: Json<PatchUserBody>) -> impl Responder{
-    let user_id: i32 = match user_auth(&state, body.name.to_string(), body.password.to_string())
-        .await
-        {
+pub async fn patch_user(state: Data<AppState>, body: Json<PatchUserBody>) -> impl Responder {
+    let user_id: i32 =
+        match user_auth(&state, body.name.to_string(), body.password.to_string()).await {
             -1 => return HttpResponse::BadRequest().json("Authentication failed"),
-            x => x
+            x => x,
         };
-    
-    match check_duplication(&state, body.new_name.to_string())
+
+    match check_duplication(&state, body.new_name.to_string()).await {
+        true => {}
+        false => return HttpResponse::BadRequest().json("Name is already exist"),
+    }
+
+    match sqlx::query_as::<_, User>(
+        "UPDATE userInfo SET name = $1, password = $2 WHERE id = $3 RETURNING id, name",
+    )
+    .bind(body.new_name.to_string())
+    .bind(body.new_password.to_string())
+    .bind(user_id)
+    .fetch_one(&state.db)
     .await
     {
-        true => {},
-        false => return HttpResponse::BadRequest().json("Name is already exist")
-    }
-    
-    match sqlx::query_as::<_, User>(
-        "UPDATE userInfo SET name = $1, password = $2 WHERE id = $3 RETURNING id, name"
-    )
-        .bind(body.new_name.to_string())
-        .bind(body.new_password.to_string())
-        .bind(user_id)
-        .fetch_one(&state.db)
-        .await
-    {
         Ok(user) => HttpResponse::Ok().json(user),
-        Err(_) => HttpResponse::InternalServerError().json("Failed to patch user")
+        Err(_) => HttpResponse::InternalServerError().json("Failed to patch user"),
     }
 }
