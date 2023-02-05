@@ -1,9 +1,11 @@
+mod events;
+mod services;
+
 use actix_web::{web::Data, App, HttpServer};
 use dotenv::dotenv;
-use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
-
-mod services;
+use events::create_event;
 use services::{create_user, delete_user, patch_user};
+use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 
 pub struct AppState {
     db: Pool<Postgres>,
@@ -25,6 +27,7 @@ async fn main() -> std::io::Result<()> {
             .service(create_user)
             .service(patch_user)
             .service(delete_user)
+            .service(create_event)
     })
     .bind(("0.0.0.0", 18421))?
     .run()
