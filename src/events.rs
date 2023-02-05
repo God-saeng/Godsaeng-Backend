@@ -22,7 +22,7 @@ struct IdRow {
 
 #[post("/event")]
 pub async fn create_event(state: Data<AppState>, body: Json<CreateEventBody>) -> impl Responder {
-    let ymd: Vec<&str> = body.event_date.split("-").collect();
+    let ymd: Vec<&str> = body.event_date.split('-').collect();
     let date = NaiveDate::from_ymd_opt(
         ymd[0].parse().unwrap(),
         ymd[1].parse().unwrap(),
