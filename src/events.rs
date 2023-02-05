@@ -1,6 +1,6 @@
 use crate::AppState;
 use actix_web::{
-    post, patch, delete,
+    delete, patch, post,
     web::{Data, Json},
     HttpResponse, Responder,
 };
@@ -23,7 +23,7 @@ pub struct PatchEventBody {
 
 #[derive(Deserialize)]
 pub struct DeleteEventBody {
-    pub id: i32
+    pub id: i32,
 }
 
 #[derive(FromRow)]
@@ -68,16 +68,13 @@ pub async fn patch_event(state: Data<AppState>, body: Json<PatchEventBody>) -> i
 }
 
 #[delete("/event")]
-pub async fn delete_event(state: Data<AppState>, body: Json<DeleteEventBody>) -> impl Responder{
-
-    match sqlx::query(
-        "DELETE FROM event WHERE id = $1"
-    )
+pub async fn delete_event(state: Data<AppState>, body: Json<DeleteEventBody>) -> impl Responder {
+    match sqlx::query("DELETE FROM event WHERE id = $1")
         .bind(body.id)
         .execute(&state.db)
         .await
     {
         Ok(_) => HttpResponse::Ok().json("Successfully deleted"),
-        Err(_) => HttpResponse::InternalServerError().json("Failed to delete event")
+        Err(_) => HttpResponse::InternalServerError().json("Failed to delete event"),
     }
 }
