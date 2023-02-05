@@ -1,6 +1,6 @@
 use crate::AppState;
 use actix_web::{
-    post,
+    patch, post,
     web::{Data, Json},
     HttpResponse, Responder,
 };
@@ -13,6 +13,12 @@ pub struct CreateEventBody {
     pub user_id: i32,
     pub note: String,
     pub event_date: String,
+}
+
+#[derive(Deserialize)]
+pub struct PatchEventBody {
+    pub id: i32,
+    pub new_note: String,
 }
 
 #[derive(FromRow)]
@@ -40,5 +46,18 @@ pub async fn create_event(state: Data<AppState>, body: Json<CreateEventBody>) ->
     {
         Ok(id_row) => HttpResponse::Ok().json(id_row.id),
         Err(_) => HttpResponse::InternalServerError().json("Failed to create event"),
+    }
+}
+
+#[patch("/event")]
+pub async fn patch_event(state: Data<AppState>, body: Json<PatchEventBody>) -> impl Responder {
+    match sqlx::query_as::<_, IdRow>("UPDATE event SET note = $1 WHERE id = $2 RETURNING id")
+        .bind(body.new_note.to_string())
+        .bind(body.id)
+        .fetch_one(&state.db)
+        .await
+    {
+        Ok(id_row) => HttpResponse::Ok().json(id_row.id),
+        Err(_) => HttpResponse::InternalServerError().json("Failed to patch event"),
     }
 }

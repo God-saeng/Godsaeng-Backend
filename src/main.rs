@@ -3,7 +3,7 @@ mod services;
 
 use actix_web::{web::Data, App, HttpServer};
 use dotenv::dotenv;
-use events::create_event;
+use events::{create_event, patch_event};
 use services::{create_user, delete_user, patch_user};
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 
@@ -28,6 +28,7 @@ async fn main() -> std::io::Result<()> {
             .service(patch_user)
             .service(delete_user)
             .service(create_event)
+            .service(patch_event)
     })
     .bind(("0.0.0.0", 18421))?
     .run()
