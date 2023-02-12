@@ -1,16 +1,9 @@
-mod events;
-mod users;
-
-use actix_web::{web::Data, App, HttpServer};
 use dotenv::dotenv;
-use events::{create_event, delete_event, patch_event};
-use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
-use users::{create_user, delete_user, patch_user};
-pub struct AppState {
-    db: Pool<Postgres>,
-}
+use godsaeng_backend::runner::run;
+use sqlx::postgres::PgPoolOptions;
+use std::net::TcpListener;
 
-#[actix_web::main]
+#[tokio::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
@@ -20,17 +13,7 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("Error building a connection pool");
 
-    HttpServer::new(move || {
-        App::new()
-            .app_data(Data::new(AppState { db: pool.clone() }))
-            .service(create_user)
-            .service(patch_user)
-            .service(delete_user)
-            .service(create_event)
-            .service(patch_event)
-            .service(delete_event)
-    })
-    .bind(("0.0.0.0", 18421))?
-    .run()
-    .await
+    let listener = TcpListener::bind("127.0.0.1:8000")?;
+    run(listener, pool)?.await?;
+    Ok(())
 }
