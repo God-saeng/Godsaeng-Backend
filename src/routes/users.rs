@@ -34,7 +34,9 @@ struct IdRow {
     pub id: i32,
 }
 
-#[post("/create-user")]
+use actix_session::Session;
+
+#[post("/user")]
 pub async fn create_user(state: Data<AppState>, body: Json<CreateUserBody>) -> impl Responder {
     // check name duplication
     match check_duplication(&state, body.name.to_string()).await {
@@ -67,25 +69,24 @@ async fn check_duplication(state: &Data<AppState>, name: String) -> bool {
     }
 }
 
-async fn user_auth(state: &Data<AppState>, name: String, password: String) -> i32 {
-    match sqlx::query_as::<_, IdRow>("SELECT id FROM userInfo WHERE name = $1 AND password = $2")
-        .bind(name)
-        .bind(password)
-        .fetch_one(&state.db)
-        .await
-    {
-        Ok(id_row) => id_row.id,
-        Err(_) => -1,
-    }
+pub fn is_valid_user(session: &Session) -> i32 {
+    let user_id: Option<i32> = match session.get("user_id") {
+        Ok(x) => x,
+        Err(_) => Some(-1),
+    };
+    user_id.unwrap_or(-1)
 }
 
 #[patch("/user")]
-pub async fn patch_user(state: Data<AppState>, body: Json<PatchUserBody>) -> impl Responder {
-    let user_id: i32 =
-        match user_auth(&state, body.name.to_string(), body.password.to_string()).await {
-            -1 => return HttpResponse::Unauthorized().json("Authentication failed"),
-            x => x,
-        };
+pub async fn patch_user(
+    state: Data<AppState>,
+    body: Json<PatchUserBody>,
+    session: Session,
+) -> impl Responder {
+    let user_id = is_valid_user(&session);
+    if user_id == -1 {
+        return HttpResponse::Unauthorized().json("Login first");
+    }
 
     match check_duplication(&state, body.new_name.to_string()).await {
         true => {}
@@ -107,18 +108,76 @@ pub async fn patch_user(state: Data<AppState>, body: Json<PatchUserBody>) -> imp
 }
 
 #[delete("/user")]
-pub async fn delete_user(state: Data<AppState>, body: Json<DeleteUserBody>) -> impl Responder {
-    let user_id: i32 =
+pub async fn delete_user(
+    state: Data<AppState>,
+    body: Json<DeleteUserBody>,
+    session: Session,
+) -> impl Responder {
+    let user_id = is_valid_user(&session);
+    if user_id == -1 {
+        return HttpResponse::Unauthorized().json("Login first");
+    }
+    // check one more time
+    let user_id_check: i32 =
         match user_auth(&state, body.name.to_string(), body.password.to_string()).await {
             -1 => return HttpResponse::Unauthorized().json("Authentication failed"),
             x => x,
         };
+    if user_id != user_id_check {
+        return HttpResponse::Unauthorized().json("Input your ID and Password");
+    }
+
     match sqlx::query("DELETE FROM userInfo WHERE id = $1")
-        .bind(user_id)
+        .bind(user_id_check)
         .execute(&state.db)
         .await
     {
         Ok(_) => HttpResponse::Ok().json("Successfully deleted"),
         Err(_) => HttpResponse::InternalServerError().json("Failed to delete user"),
     }
+}
+
+#[derive(Deserialize)]
+pub struct LoginUserBody {
+    pub name: String,
+    pub password: String,
+}
+
+async fn user_auth(state: &Data<AppState>, name: String, password: String) -> i32 {
+    match sqlx::query_as::<_, IdRow>("SELECT id FROM userInfo WHERE name = $1 AND password = $2")
+        .bind(name)
+        .bind(password)
+        .fetch_one(&state.db)
+        .await
+    {
+        Ok(id_row) => id_row.id,
+        Err(_) => -1,
+    }
+}
+
+#[post("/login")]
+pub async fn login(
+    state: Data<AppState>,
+    body: Json<LoginUserBody>,
+    session: Session,
+) -> impl Responder {
+    let user_id: i32 =
+        match user_auth(&state, body.name.to_string(), body.password.to_string()).await {
+            -1 => return HttpResponse::Unauthorized().json("Authentication failed"),
+            x => x,
+        };
+
+    session
+        .insert("user_id", user_id)
+        .expect("Error to insert session");
+    session.renew();
+
+    // ##
+    // have to add session counter
+    // ##
+
+    HttpResponse::Ok().json(User {
+        id: user_id,
+        name: body.name.to_string(),
+    })
 }
