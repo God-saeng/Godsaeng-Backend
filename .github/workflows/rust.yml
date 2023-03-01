@@ -44,6 +44,15 @@ jobs:
   test:
     name: ✅ Test Suite
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14
+        ports:
+          - 8001:5432
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -51,6 +60,20 @@ jobs:
           toolchain: stable
           override: true
       - uses: Swatinem/rust-cache@v1
+        with:
+          key: sqlx-0.6.2
+      - name: Install sqlx-cli
+        run:
+          cargo install sqlx-cli
+          --version=0.6.2
+          --features rustls,postgres
+          --no-default-features 
+          --locked
+      - name: Migrate database
+        run: |
+          sudo apt-get install libpq-dev -y
+          sqlx database create
+          sqlx migrate run
       - name: Install cargo-nextest
         uses: baptiste0928/cargo-install@v1
         with:
